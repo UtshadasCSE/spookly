@@ -27,7 +27,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
     status: 'ok',
     appName: 'Spookly',
     hasApiKey: isApiKeyConfigured(),
-    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite',
+    model: process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
   });
 });
 

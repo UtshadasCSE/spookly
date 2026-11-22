@@ -66,7 +66,10 @@ export const App: React.FC = () => {
   // Check health and server configuration on mount
   useEffect(() => {
     checkServerHealth().then((health) => {
-      setHasApiKey(health.hasApiKey);
+      // Only set hasApiKey to false if the server explicitly connected and confirmed no key
+      if (health.serverReachable) {
+        setHasApiKey(health.hasApiKey);
+      }
     });
   }, []);
 
