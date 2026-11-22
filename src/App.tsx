@@ -12,20 +12,40 @@ import { SpeakingControls } from './components/SpeakingControls/SpeakingControls
 import { AnswerFeedback } from './components/AnswerFeedback/AnswerFeedback';
 import { AnswerVideoModal } from './components/AnswerVideoModal/AnswerVideoModal';
 import { ResultsPage } from './components/ResultsPage/ResultsPage';
+import { NotFoundPage } from './components/NotFoundPage/NotFoundPage';
+import { MobileBlocker } from './components/MobileBlocker/MobileBlocker';
+import { useIsMobileDevice } from './hooks/useIsMobileDevice';
 import { fetchQuestions, submitAnswerEvaluation, checkServerHealth } from './services/api';
 import { Category, Difficulty } from './types';
 import { AlertCircle } from 'lucide-react';
 import { SpooklyBadge, SpooklyGridBackground } from './components/ui';
 
-type AppView = 'landing' | 'category' | 'practice' | 'results';
+type AppView = 'landing' | 'category' | 'practice' | 'results' | 'not-found';
+
+const isPathNotFound = (pathname: string): boolean => {
+  return pathname !== '/' && pathname !== '' && pathname !== '/index.html';
+};
 
 export const App: React.FC = () => {
-  const [view, setView] = useState<AppView>('landing');
+  const [currentPath, setCurrentPath] = useState<string>(() =>
+    typeof window !== 'undefined' ? window.location.pathname : '/'
+  );
+
+  const [view, setView] = useState<AppView>(() => {
+    if (typeof window !== 'undefined' && isPathNotFound(window.location.pathname)) {
+      return 'not-found';
+    }
+    return 'landing';
+  });
+
   const [isLoadingQuestions, setIsLoadingQuestions] = useState<boolean>(false);
   const [isEvaluatingAnswer, setIsEvaluatingAnswer] = useState<boolean>(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [hasApiKey, setHasApiKey] = useState<boolean>(true);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState<boolean>(false);
+
+  // Check mobile device status
+  const { isMobile, screenWidth, screenHeight } = useIsMobileDevice();
 
   // Device & camera hook
   const {
@@ -86,12 +106,47 @@ export const App: React.FC = () => {
     });
   }, []);
 
+  // Listen for browser navigation changes (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      setCurrentPath(path);
+      if (isPathNotFound(path)) {
+        setView('not-found');
+      } else {
+        setView((prev) => (prev === 'not-found' ? 'landing' : prev));
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   // Ensure camera & mic stream is active when entering practice view
   useEffect(() => {
     if (view === 'practice' && !stream) {
       startDevices();
     }
   }, [view, stream, startDevices]);
+
+  // Handle return home from 404 or any screen
+  const handleReturnHome = () => {
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', '/');
+      setCurrentPath('/');
+    }
+    setView('landing');
+    setGlobalError(null);
+  };
+
+  // Start practice directly from 404 page
+  const handleStartPracticeFrom404 = async () => {
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', '/');
+      setCurrentPath('/');
+    }
+    await handleGetStarted();
+  };
 
   // Handle "Get Started" from landing page - ALWAYS open category selector
   const handleGetStarted = async (): Promise<boolean> => {
@@ -208,6 +263,11 @@ export const App: React.FC = () => {
     setView('landing');
   };
 
+  // Totally turn off this app on mobile devices
+  if (isMobile) {
+    return <MobileBlocker screenWidth={screenWidth} screenHeight={screenHeight} />;
+  }
+
   return (
     <SpooklyGridBackground className="min-h-screen flex flex-col font-sans">
       {/* Missing API key warning banner */}
@@ -256,6 +316,15 @@ export const App: React.FC = () => {
           isCompletedToday={isSessionCompleted}
           onViewResults={() => setView('results')}
           onResetSession={handleResetSession}
+        />
+      )}
+
+      {/* VIEW: 404 NOT FOUND PAGE */}
+      {view === 'not-found' && (
+        <NotFoundPage
+          attemptedPath={currentPath}
+          onReturnHome={handleReturnHome}
+          onStartPractice={handleStartPracticeFrom404}
         />
       )}
 
