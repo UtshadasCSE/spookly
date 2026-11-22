@@ -1,6 +1,6 @@
 import React from 'react';
 import { Question } from '../../types';
-import { Lightbulb, Target } from 'lucide-react';
+import { Lightbulb } from 'lucide-react';
 import { SpooklyBadge } from '../ui';
 
 interface QuestionCardProps {
@@ -14,7 +14,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 }) => {
   const formattedNumber = String(questionNumber).padStart(2, '0');
 
-  // Identify key focus phrase without overlapping text lines
+  // Identify key focus phrase for the line box
   const words = question.question.trim().split(/\s+/);
   let beforeText = '';
   let highlightText = '';
@@ -33,38 +33,29 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   }
 
   return (
-    <div className="relative p-6 sm:p-7 bg-white border-2 border-[#171717] rounded-sm shadow-[3px_3px_0px_0px_#171717] text-left">
+    <div className="relative p-4 sm:p-5 bg-white border-2 border-[#171717] rounded-sm shadow-[3px_3px_0px_0px_#171717] text-left">
       {/* Figma Corner Handles */}
       <span className="figma-handle -top-[4px] -left-[4px]" />
       <span className="figma-handle -top-[4px] -right-[4px]" />
       <span className="figma-handle -bottom-[4px] -left-[4px]" />
       <span className="figma-handle -bottom-[4px] -right-[4px]" />
 
-      {/* Top Meta Bar with dedicated Key Focus indicator */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 mb-5 pb-3 border-b border-[#171717]/10">
-        <div className="flex flex-wrap items-center gap-2">
-          <SpooklyBadge variant="lime" dot>
-            AI SPEAKING PARTNER
-          </SpooklyBadge>
+      {/* Top Meta Bar: AI SPEAKING PARTNER and PROMPT number (monochrome, no color) */}
+      <div className="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-[#171717]/10">
+        <SpooklyBadge variant="white" dot>
+          AI SPEAKING PARTNER
+        </SpooklyBadge>
 
-          {highlightText && highlightText !== question.question && (
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xs bg-[#171717] text-[#c8ff29] text-[10px] font-mono font-bold uppercase tracking-wider">
-              <Target className="w-3 h-3 text-[#c8ff29]" />
-              KEY FOCUS: {highlightText}
-            </span>
-          )}
-        </div>
-
-        <span className="text-xs font-mono font-bold text-neutral-500 uppercase tracking-wider">
+        <span className="text-[11px] font-mono font-bold text-neutral-500 uppercase tracking-wider">
           PROMPT #{formattedNumber}
         </span>
       </div>
 
-      {/* Question Headline - Clean, spacious, 100% visible, no overlapping elements */}
-      <h2 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-[#171717] leading-relaxed sm:leading-relaxed mb-6">
+      {/* AI-Generated Speaking Question - Line box on key word with Figma handles, no color background */}
+      <h2 className="text-base sm:text-lg font-bold text-[#171717] leading-relaxed mb-3">
         {beforeText && `${beforeText} `}
-        <span className="relative inline-block bg-[#c8ff29] text-[#171717] px-2 py-0.5 border-2 border-[#171717] shadow-[2px_2px_0px_0px_#171717] rounded-xs mx-1 align-baseline my-1">
-          {/* Figma corner handles on the highlighted keyword */}
+        <span className="relative inline-block border-2 border-[#171717] rounded-xs px-2 py-0.5 mx-1 align-baseline my-0.5 font-bold bg-transparent">
+          {/* Figma Corner Handles on Key Word Box */}
           <span className="figma-handle -top-[3.5px] -left-[3.5px]" />
           <span className="figma-handle -top-[3.5px] -right-[3.5px]" />
           <span className="figma-handle -bottom-[3.5px] -left-[3.5px]" />
@@ -74,13 +65,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         {afterText && ` ${afterText}`}
       </h2>
 
-      {/* Context Tip Footer */}
+      {/* One Short Speaking Tip - Clean neutral styling, no color */}
       {question.contextTip && (
-        <div className="pt-4 border-t border-[#171717]/10 flex items-start gap-2.5 text-xs text-neutral-700">
-          <span className="p-1 bg-[#c8ff29] border border-[#171717] rounded-xs shrink-0 mt-0.5">
-            <Lightbulb className="w-3.5 h-3.5 text-[#171717]" />
+        <div className="pt-2.5 border-t border-[#171717]/10 flex items-start gap-2 text-xs text-neutral-700">
+          <span className="p-0.5 bg-neutral-100 border border-[#171717] rounded-xs shrink-0 mt-0.5">
+            <Lightbulb className="w-3 h-3 text-[#171717]" />
           </span>
-          <p className="leading-relaxed font-medium">
+          <p className="leading-relaxed font-medium text-[11px] sm:text-xs">
             <span className="font-bold uppercase tracking-wider text-[#171717]">TIP:</span>{' '}
             {question.contextTip}
           </p>
@@ -89,3 +80,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     </div>
   );
 };
+
+
+

@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, HTMLMotionProps } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'dark';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface SpooklyButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
@@ -45,6 +45,8 @@ export const SpooklyButton: React.FC<SpooklyButtonProps> = ({
       'bg-transparent text-neutral-600 hover:text-[#171717] hover:bg-neutral-100/60',
     danger:
       'bg-rose-500 text-white border-2 border-[#171717] shadow-[2px_2px_0px_0px_#171717] hover:bg-rose-600',
+    dark:
+      'bg-[#171717] text-white border-2 border-[#171717] shadow-[2px_2px_0px_0px_#171717] hover:bg-neutral-800 hover:shadow-[3px_3px_0px_0px_#171717] hover:-translate-x-[1px] hover:-translate-y-[1px] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_#171717]',
   }[variant];
 
   return (

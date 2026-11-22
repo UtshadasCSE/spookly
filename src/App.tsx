@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCamera } from './hooks/useCamera';
 import { useSpeechRecognition } from './hooks/useSpeechRecognition';
+import { useMediaRecorder } from './hooks/useMediaRecorder';
 import { useDailyProgress } from './hooks/useDailyProgress';
 import { LandingPage } from './components/LandingPage/LandingPage';
 import { CategorySelector } from './components/CategorySelector/CategorySelector';
@@ -9,11 +10,12 @@ import { QuestionCard } from './components/QuestionCard/QuestionCard';
 import { ProgressIndicator } from './components/ProgressIndicator/ProgressIndicator';
 import { SpeakingControls } from './components/SpeakingControls/SpeakingControls';
 import { AnswerFeedback } from './components/AnswerFeedback/AnswerFeedback';
+import { AnswerVideoModal } from './components/AnswerVideoModal/AnswerVideoModal';
 import { ResultsPage } from './components/ResultsPage/ResultsPage';
 import { fetchQuestions, submitAnswerEvaluation, checkServerHealth } from './services/api';
 import { Category, Difficulty } from './types';
-import { AlertCircle, Lightbulb } from 'lucide-react';
-import { SpooklyBadge, SpooklyCard, SpooklyGridBackground } from './components/ui';
+import { AlertCircle } from 'lucide-react';
+import { SpooklyBadge, SpooklyGridBackground } from './components/ui';
 
 type AppView = 'landing' | 'category' | 'practice' | 'results';
 
@@ -23,6 +25,7 @@ export const App: React.FC = () => {
   const [isEvaluatingAnswer, setIsEvaluatingAnswer] = useState<boolean>(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [hasApiKey, setHasApiKey] = useState<boolean>(true);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState<boolean>(false);
 
   // Device & camera hook
   const {
@@ -48,6 +51,16 @@ export const App: React.FC = () => {
     resetTranscript,
     setTranscript,
   } = useSpeechRecognition();
+
+  // Media recorder hook for recording user answer video
+  const {
+    videoUrl: recordedVideoUrl,
+    recordedDuration,
+    startRecording,
+    stopRecording,
+    resetRecording,
+    getDuration,
+  } = useMediaRecorder(stream);
 
   // Daily progress and session storage hook
   const {
@@ -114,12 +127,26 @@ export const App: React.FC = () => {
     }
   };
 
+  // Start speaking and recording video answer
+  const handleStartSpeaking = () => {
+    startListening();
+    startRecording();
+  };
+
+  // Stop speaking and stop recording video answer
+  const handleStopSpeaking = () => {
+    stopListening();
+    stopRecording();
+  };
+
   // Submit spoken answer for Gemini evaluation
   const handleSubmitAnswer = async (spokenTranscript: string) => {
     if (!currentQuestion) return;
 
-    // Stop speech recognition if still active
+    // Stop speech recognition and video recorder
     stopListening();
+    const videoUrl = await stopRecording();
+    const duration = getDuration();
     setIsEvaluatingAnswer(true);
     setGlobalError(null);
 
@@ -130,8 +157,15 @@ export const App: React.FC = () => {
         session?.difficulty || 'intermediate'
       );
 
-      // Record answer and evaluation in localStorage
-      recordAnswer(currentQuestion.id, currentQuestion.question, spokenTranscript, evaluation);
+      // Record answer, evaluation and video URL with duration
+      recordAnswer(
+        currentQuestion.id,
+        currentQuestion.question,
+        spokenTranscript,
+        evaluation,
+        videoUrl || recordedVideoUrl || undefined,
+        duration || recordedDuration || undefined
+      );
     } catch (err: any) {
       console.error('Answer evaluation failed:', err);
       setGlobalError(
@@ -145,8 +179,10 @@ export const App: React.FC = () => {
 
   // Move to next question after reviewing feedback
   const handleNextQuestion = () => {
+    setIsPreviewModalOpen(false);
     const hasMore = advanceToNextQuestion();
     resetTranscript();
+    resetRecording();
     setGlobalError(null);
 
     if (!hasMore) {
@@ -158,13 +194,17 @@ export const App: React.FC = () => {
 
   // Retry speaking current answer
   const handleRetryCurrentAnswer = () => {
+    setIsPreviewModalOpen(false);
     resetTranscript();
+    resetRecording();
   };
 
   // Reset entire session (for testing/retrying)
   const handleResetSession = () => {
+    setIsPreviewModalOpen(false);
     resetSession();
     resetTranscript();
+    resetRecording();
     setView('landing');
   };
 
@@ -228,11 +268,11 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* VIEW: SPEAKING PRACTICE INTERFACE (Two-Column Desktop Layout) */}
+      {/* VIEW: SPEAKING PRACTICE INTERFACE (Two-Card Layout: 58% Left Dominant Camera, 42% Right AI Workspace) */}
       {view === 'practice' && currentQuestion && (
-        <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-8 py-6 sm:py-10 flex flex-col gap-6">
+        <main className="flex-1 w-full max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col gap-4 sm:gap-5">
           {/* Header navigation bar */}
-          <div className="flex items-center justify-between pb-4 border-b-2 border-[#171717]">
+          <div className="flex items-center justify-between pb-3.5 border-b-2 border-[#171717]">
             <div className="flex items-center gap-2.5">
               <img
                 src="/favicon.png"
@@ -250,33 +290,35 @@ export const App: React.FC = () => {
 
             <div className="flex items-center gap-3">
               <button
+                type="button"
                 onClick={() => {
                   stopListening();
                   setView('category');
                 }}
-                className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-600 hover:text-[#171717] transition"
+                className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-600 hover:text-[#171717] transition cursor-pointer"
               >
                 CHANGE CATEGORY
               </button>
               <span className="text-neutral-300 font-bold">•</span>
               <button
+                type="button"
                 onClick={() => {
                   stopListening();
                   setView('landing');
                 }}
-                className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-500 hover:text-[#171717] transition"
+                className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-500 hover:text-[#171717] transition cursor-pointer"
               >
                 EXIT TO HOME
               </button>
             </div>
           </div>
 
-          {/* TWO COLUMN GRID */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* LEFT SECTION (Col 1-5 on desktop): Live Camera Preview & Media Controls */}
+          {/* TWO MAIN CARDS: LEFT (58% CAMERA) & RIGHT (42% AI CONVERSATION) */}
+          <div className="grid grid-cols-1 md:grid-cols-[56fr_44fr] lg:grid-cols-[58fr_42fr] gap-4 lg:gap-5 items-start">
+            {/* LEFT CARD: Large Camera Preview, Controls, and Speaking Tips */}
             <section
               aria-label="Video preview and device controls"
-              className="lg:col-span-5 flex flex-col gap-4 lg:sticky lg:top-8"
+              className="w-full flex flex-col gap-3 lg:sticky lg:top-6"
             >
               <CameraPreview
                 videoRef={videoRef}
@@ -290,27 +332,14 @@ export const App: React.FC = () => {
                 onToggleMic={toggleMic}
                 onRetryPermissions={startDevices}
               />
-
-              {/* Helpful session guidance */}
-              <SpooklyCard className="p-4 text-left text-xs text-neutral-600 space-y-2">
-                <div className="flex items-center gap-1.5 font-mono font-bold text-xs uppercase tracking-wider text-[#171717]">
-                  <Lightbulb className="w-3.5 h-3.5 text-[#171717]" />
-                  SPEAKING TIPS
-                </div>
-                <ul className="list-disc list-inside space-y-1 text-neutral-600 font-medium">
-                  <li>Speak clearly at a conversational pace.</li>
-                  <li>Aim for 30–60 seconds of continuous speech.</li>
-                  <li>Review AI grammar & natural phrasing before proceeding.</li>
-                </ul>
-              </SpooklyCard>
             </section>
 
-            {/* RIGHT SECTION (Col 6-12 on desktop): Question, Transcript, Feedback */}
+            {/* RIGHT CARD: Compact AI Conversation Interface */}
             <section
               aria-label="Speaking practice prompt and answer review"
-              className="lg:col-span-7 flex flex-col gap-6"
+              className="w-full flex flex-col gap-3"
             >
-              {/* Progress indicator */}
+              {/* Compact Top Information: Category, Difficulty, Question #, Segmented Progress, % */}
               <ProgressIndicator
                 currentIndex={currentIndex}
                 totalQuestions={totalQuestions}
@@ -318,21 +347,21 @@ export const App: React.FC = () => {
                 difficultyLabel={session?.difficulty}
               />
 
-              {/* Current Question Card */}
+              {/* Compact AI Question Card */}
               <QuestionCard
                 question={currentQuestion}
                 questionNumber={currentIndex + 1}
               />
 
-              {/* Speaking Controls & Transcript (if not yet submitted feedback) */}
+              {/* Speaking Controls & Compact Transcript */}
               {!currentRecord && (
                 <SpeakingControls
                   isListening={isListening}
                   transcript={transcript}
                   interimTranscript={interimTranscript}
                   isEvaluating={isEvaluatingAnswer}
-                  onStartSpeaking={startListening}
-                  onStopSpeaking={stopListening}
+                  onStartSpeaking={handleStartSpeaking}
+                  onStopSpeaking={handleStopSpeaking}
                   onRetryAnswer={handleRetryCurrentAnswer}
                   onSubmitAnswer={handleSubmitAnswer}
                   onTranscriptChange={setTranscript}
@@ -340,7 +369,7 @@ export const App: React.FC = () => {
                 />
               )}
 
-              {/* Answer Feedback (displayed after user submits answer) */}
+              {/* Compact Answer Feedback */}
               {currentRecord && (
                 <AnswerFeedback
                   evaluation={currentRecord.evaluation}
@@ -348,12 +377,25 @@ export const App: React.FC = () => {
                   totalQuestions={totalQuestions}
                   onNextQuestion={handleNextQuestion}
                   isLastQuestion={currentIndex + 1 >= totalQuestions}
+                  answerTranscript={currentRecord.answerTranscript || transcript}
+                  onPreviewAnswer={() => setIsPreviewModalOpen(true)}
+                  hasRecordedVideo={Boolean(currentRecord.videoUrl || recordedVideoUrl)}
                 />
               )}
             </section>
           </div>
         </main>
       )}
+
+      {/* Pop-up Modal: Preview Recorded Answer Video with blurred background */}
+      <AnswerVideoModal
+        isOpen={isPreviewModalOpen}
+        onClose={() => setIsPreviewModalOpen(false)}
+        videoUrl={currentRecord?.videoUrl || recordedVideoUrl}
+        answerTranscript={currentRecord?.answerTranscript || transcript}
+        questionText={currentQuestion?.question}
+        questionNumber={currentIndex + 1}
+      />
 
       {/* VIEW: RESULTS PAGE */}
       {view === 'results' && session && (

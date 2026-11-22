@@ -1,6 +1,13 @@
 import React, { useEffect } from 'react';
-import { Camera, CameraOff, Mic, MicOff, AlertCircle, RefreshCw } from 'lucide-react';
-import { SpooklyCursorBadge } from '../ui';
+import {
+  Camera,
+  CameraOff,
+  Mic,
+  MicOff,
+  AlertCircle,
+  RefreshCw,
+  Lightbulb,
+} from 'lucide-react';
 
 interface CameraPreviewProps {
   videoRef: React.RefObject<HTMLVideoElement | null>;
@@ -27,7 +34,7 @@ export const CameraPreview: React.FC<CameraPreviewProps> = ({
   onToggleMic,
   onRetryPermissions,
 }) => {
-  // Ensure stream is attached to the video DOM element whenever mounted or stream updates
+  // Ensure stream is attached to the live video DOM element
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -39,7 +46,6 @@ export const CameraPreview: React.FC<CameraPreviewProps> = ({
       const playPromise = video.play();
       if (playPromise !== undefined) {
         playPromise.catch((err) => {
-          // Ignore normal abort errors during unmount/reload
           if (err.name !== 'AbortError') {
             console.warn('Video auto-play prevented:', err);
           }
@@ -54,23 +60,26 @@ export const CameraPreview: React.FC<CameraPreviewProps> = ({
 
   return (
     <div className="w-full flex flex-col gap-3">
-      {/* Floating Figma-style cursor label: YOUR CAMERA */}
-      <div className="flex items-center justify-between">
-        <SpooklyCursorBadge name="YOUR CAMERA" color="#c8ff29" />
+      {/* Label above preview */}
+      <div className="flex items-center justify-between px-0.5">
+        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xs bg-white text-[#171717] border border-[#171717] font-mono font-bold text-[10px] uppercase tracking-wider shadow-[1px_1px_0px_0px_#171717]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#171717]" />
+          YOUR CAMERA
+        </div>
         <span className="text-[10px] font-mono text-neutral-500 font-bold uppercase tracking-wider">
           LIVE PREVIEW
         </span>
       </div>
 
-      {/* Video Container with Figma-style border and handles */}
-      <div className="relative w-full aspect-[4/3] sm:aspect-video rounded-sm overflow-hidden bg-[#171717] border-2 border-[#171717] shadow-[3px_3px_0px_0px_#171717] flex items-center justify-center">
+      {/* Video Container (16:9 aspect-video) with Figma border and handles */}
+      <div className="relative w-full aspect-video rounded-sm overflow-hidden bg-[#171717] border-2 border-[#171717] shadow-[3px_3px_0px_0px_#171717] flex items-center justify-center group">
         {/* Figma Corner Handles */}
         <span className="figma-handle -top-[4px] -left-[4px] z-30" />
         <span className="figma-handle -top-[4px] -right-[4px] z-30" />
         <span className="figma-handle -bottom-[4px] -left-[4px] z-30" />
         <span className="figma-handle -bottom-[4px] -right-[4px] z-30" />
 
-        {/* Live Video Element */}
+        {/* Live Camera Element */}
         <video
           ref={videoRef}
           autoPlay
@@ -99,8 +108,9 @@ export const CameraPreview: React.FC<CameraPreviewProps> = ({
               Microphone is active. Click below to enable your camera feed.
             </p>
             <button
+              type="button"
               onClick={onToggleCamera}
-              className="mt-3 px-3 py-1.5 text-[11px] font-mono font-bold uppercase bg-[#c8ff29] text-[#171717] border border-[#171717] rounded-xs hover:bg-[#b5f015] shadow-[1px_1px_0px_0px_#ffffff] transition"
+              className="mt-3 px-3 py-1.5 text-[11px] font-mono font-bold uppercase bg-[#171717] text-white border border-neutral-700 rounded-xs hover:bg-neutral-800 shadow-[1px_1px_0px_0px_#ffffff] transition cursor-pointer"
             >
               Turn Camera On
             </button>
@@ -111,7 +121,7 @@ export const CameraPreview: React.FC<CameraPreviewProps> = ({
         {error && (
           <div className="flex flex-col items-center justify-center text-center p-6 bg-neutral-950/95 absolute inset-0 z-20">
             <div className="w-10 h-10 rounded-sm bg-neutral-900 border border-neutral-700 flex items-center justify-center mb-3">
-              <AlertCircle className="w-5 h-5 text-[#c8ff29]" />
+              <AlertCircle className="w-5 h-5 text-white" />
             </div>
             <p className="text-xs font-mono font-bold text-white uppercase tracking-wider mb-1">
               Camera Access Required
@@ -121,8 +131,9 @@ export const CameraPreview: React.FC<CameraPreviewProps> = ({
             </p>
             {onRetryPermissions && (
               <button
+                type="button"
                 onClick={onRetryPermissions}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-bold uppercase bg-[#c8ff29] text-[#171717] border border-[#171717] rounded-xs hover:bg-[#b5f015] transition"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-bold uppercase bg-[#171717] text-white border border-neutral-700 rounded-xs hover:bg-neutral-800 transition cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Retry Access
@@ -131,10 +142,10 @@ export const CameraPreview: React.FC<CameraPreviewProps> = ({
           </div>
         )}
 
-        {/* Top-Left Recording / Status Indicator */}
+        {/* Top-Left Recording / Status Indicator inside preview (Monochrome) */}
         <div className="absolute top-3 left-3 z-20">
           {isListening ? (
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-xs bg-[#c8ff29] text-[#171717] text-xs font-mono font-bold border border-[#171717] shadow-[2px_2px_0px_0px_#171717]">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-xs bg-white text-[#171717] text-xs font-mono font-bold border border-[#171717] shadow-[2px_2px_0px_0px_#171717]">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#171717] opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#171717]"></span>
@@ -148,29 +159,29 @@ export const CameraPreview: React.FC<CameraPreviewProps> = ({
             </div>
           ) : (
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xs bg-black/80 text-white text-[10px] font-mono font-bold border border-neutral-700 backdrop-blur-xs">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#c8ff29]"></span>
+              <span className="h-1.5 w-1.5 rounded-full bg-white"></span>
               READY TO SPEAK
             </div>
           )}
         </div>
 
-        {/* Top-Right Microphone Status Badge */}
+        {/* Top-Right Microphone Status Badge inside preview */}
         <div className="absolute top-3 right-3 z-20">
           <div
             className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-xs text-[10px] font-mono font-bold border ${
               isMicOn
-                ? 'bg-black/80 text-white border-neutral-700'
-                : 'bg-rose-500 text-white border-[#171717]'
+                ? 'bg-black/80 text-white border-neutral-700 backdrop-blur-xs'
+                : 'bg-neutral-900 text-neutral-300 border-neutral-700'
             }`}
           >
             {isMicOn ? (
               <>
-                <Mic className="w-3 h-3 text-[#c8ff29]" />
+                <Mic className="w-3 h-3 text-white" />
                 MIC ON
               </>
             ) : (
               <>
-                <MicOff className="w-3 h-3 text-white" />
+                <MicOff className="w-3 h-3 text-neutral-400" />
                 MIC MUTED
               </>
             )}
@@ -179,16 +190,17 @@ export const CameraPreview: React.FC<CameraPreviewProps> = ({
       </div>
 
       {/* Control Bar beneath camera */}
-      <div className="flex items-center justify-between p-3 rounded-sm bg-white border border-[#171717] shadow-[2px_2px_0px_0px_#171717]">
+      <div className="flex items-center justify-between p-2.5 sm:p-3 rounded-sm bg-white border border-[#171717] shadow-[2px_2px_0px_0px_#171717]">
         <div className="flex items-center gap-2">
           {/* Toggle Camera button */}
           <button
+            type="button"
             onClick={onToggleCamera}
             title={isCameraOn ? 'Turn camera off' : 'Turn camera on'}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs text-xs font-mono font-bold uppercase transition border border-[#171717] ${
+            className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xs text-[11px] sm:text-xs font-mono font-bold uppercase transition border border-[#171717] cursor-pointer ${
               isCameraOn
-                ? 'bg-white text-[#171717] hover:bg-neutral-100'
-                : 'bg-[#171717] text-[#c8ff29]'
+                ? 'bg-white text-[#171717] hover:bg-neutral-100 shadow-[1px_1px_0px_0px_#171717]'
+                : 'bg-[#171717] text-white'
             }`}
           >
             {isCameraOn ? (
@@ -198,7 +210,7 @@ export const CameraPreview: React.FC<CameraPreviewProps> = ({
               </>
             ) : (
               <>
-                <CameraOff className="w-3.5 h-3.5 text-[#c8ff29]" />
+                <CameraOff className="w-3.5 h-3.5 text-neutral-300" />
                 CAMERA OFF
               </>
             )}
@@ -206,12 +218,13 @@ export const CameraPreview: React.FC<CameraPreviewProps> = ({
 
           {/* Toggle Mic button */}
           <button
+            type="button"
             onClick={onToggleMic}
             title={isMicOn ? 'Mute microphone' : 'Unmute microphone'}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs text-xs font-mono font-bold uppercase transition border border-[#171717] ${
+            className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xs text-[11px] sm:text-xs font-mono font-bold uppercase transition border border-[#171717] cursor-pointer ${
               isMicOn
-                ? 'bg-white text-[#171717] hover:bg-neutral-100'
-                : 'bg-rose-500 text-white'
+                ? 'bg-white text-[#171717] hover:bg-neutral-100 shadow-[1px_1px_0px_0px_#171717]'
+                : 'bg-[#171717] text-white'
             }`}
           >
             {isMicOn ? (
@@ -221,16 +234,29 @@ export const CameraPreview: React.FC<CameraPreviewProps> = ({
               </>
             ) : (
               <>
-                <MicOff className="w-3.5 h-3.5 text-white" />
+                <MicOff className="w-3.5 h-3.5 text-neutral-300" />
                 MUTED
               </>
             )}
           </button>
         </div>
 
-        <span className="text-[10px] font-mono text-neutral-400 font-bold uppercase">
+        <span className="text-[10px] font-mono text-neutral-400 font-bold uppercase tracking-wider">
           CONTROLS
         </span>
+      </div>
+
+      {/* Compact Speaking Tips Section below controls */}
+      <div className="p-3 sm:p-3.5 rounded-sm bg-white border border-[#171717] shadow-[2px_2px_0px_0px_#171717] text-left space-y-1.5">
+        <div className="flex items-center gap-1.5 font-mono font-bold text-[11px] uppercase tracking-wider text-[#171717]">
+          <Lightbulb className="w-3.5 h-3.5 text-[#171717]" />
+          SPEAKING TIPS
+        </div>
+        <ul className="list-disc list-inside space-y-1 text-neutral-600 text-[11px] font-medium leading-relaxed">
+          <li>Speak clearly at a conversational pace.</li>
+          <li>Aim for 30–60 seconds of continuous speech.</li>
+          <li>Review AI grammar &amp; natural phrasing before proceeding.</li>
+        </ul>
       </div>
     </div>
   );

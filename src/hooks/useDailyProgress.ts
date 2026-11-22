@@ -27,7 +27,9 @@ export interface UseDailyProgressReturn {
     questionId: number,
     questionText: string,
     transcript: string,
-    evaluation: AnswerEvaluation
+    evaluation: AnswerEvaluation,
+    videoUrl?: string,
+    videoDuration?: number
   ) => void;
   advanceToNextQuestion: () => boolean; // returns true if advanced, false if was last question (completed)
   resetSession: () => void;
@@ -69,7 +71,9 @@ export function useDailyProgress(): UseDailyProgressReturn {
       questionId: number,
       questionText: string,
       transcript: string,
-      evaluation: AnswerEvaluation
+      evaluation: AnswerEvaluation,
+      videoUrl?: string,
+      videoDuration?: number
     ) => {
       setSession((prev) => {
         if (!prev) return prev;
@@ -80,6 +84,8 @@ export function useDailyProgress(): UseDailyProgressReturn {
           answerTranscript: transcript,
           evaluation,
           timestamp: Date.now(),
+          videoUrl,
+          videoDuration,
         };
 
         const updatedAnswers = {

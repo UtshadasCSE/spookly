@@ -34,21 +34,18 @@ export const SpeakingControls: React.FC<SpeakingControlsProps> = ({
   const hasSpokenContent = Boolean(transcript.trim().length > 0 || interimTranscript.trim().length > 0);
 
   const handleSubmit = () => {
-    if (isListening) {
-      onStopSpeaking();
-    }
     const clean = transcript.trim();
     if (!clean) return;
     onSubmitAnswer(clean);
   };
 
   return (
-    <div className="w-full flex flex-col gap-4">
-      {/* Transcript Box with Figma-style border and active state */}
+    <div className="w-full flex-1 flex flex-col justify-between gap-3">
+      {/* Answer Transcript Card - flex-1 to match left card height, clean monochrome */}
       <div
-        className={`relative p-5 rounded-sm bg-white border-2 transition-all text-left min-h-[140px] flex flex-col justify-between ${
+        className={`relative p-3.5 sm:p-4 rounded-sm bg-white border-2 transition-all text-left flex-1 flex flex-col justify-between min-h-[140px] ${
           isListening
-            ? 'border-[#171717] ring-4 ring-[#c8ff29]/60 shadow-[3px_3px_0px_0px_#171717]'
+            ? 'border-[#171717] ring-2 ring-[#171717]/20 shadow-[3px_3px_0px_0px_#171717]'
             : 'border-[#171717] shadow-[2px_2px_0px_0px_#171717]'
         }`}
       >
@@ -59,7 +56,7 @@ export const SpeakingControls: React.FC<SpeakingControlsProps> = ({
         <span className="figma-handle -bottom-[4px] -right-[4px]" />
 
         <div>
-          <div className="flex items-center justify-between text-xs font-mono font-bold text-neutral-500 mb-2.5">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-neutral-500 mb-2">
             <span className="uppercase tracking-wider text-[#171717] flex items-center gap-1.5">
               {isListening && (
                 <span className="w-2 h-2 rounded-full bg-[#171717] animate-ping" />
@@ -71,7 +68,7 @@ export const SpeakingControls: React.FC<SpeakingControlsProps> = ({
               <button
                 type="button"
                 onClick={() => setIsEditingManually(!isEditingManually)}
-                className="inline-flex items-center gap-1 text-[11px] font-mono font-bold uppercase text-neutral-600 hover:text-[#171717] transition"
+                className="inline-flex items-center gap-1 text-[10px] font-mono font-bold uppercase text-neutral-600 hover:text-[#171717] transition cursor-pointer"
               >
                 {isEditingManually ? (
                   <>
@@ -93,29 +90,29 @@ export const SpeakingControls: React.FC<SpeakingControlsProps> = ({
               value={transcript}
               onChange={(e) => onTranscriptChange(e.target.value)}
               rows={3}
-              className="w-full text-sm font-medium text-[#171717] p-2.5 border border-[#171717] rounded-xs focus:ring-2 focus:ring-[#c8ff29] focus:outline-hidden"
+              className="w-full text-xs sm:text-sm font-medium text-[#171717] p-2 border border-[#171717] rounded-xs focus:ring-2 focus:ring-[#171717] focus:outline-hidden"
               placeholder="Type or refine your spoken answer..."
             />
           ) : hasSpokenContent ? (
-            <p className="text-base sm:text-lg font-medium text-[#171717] leading-relaxed">
+            <p className="text-sm sm:text-[15px] font-medium text-[#171717] leading-relaxed">
               {transcript}
               {interimTranscript && (
                 <span className="text-neutral-400 font-normal italic"> {interimTranscript}</span>
               )}
             </p>
           ) : (
-            <p className="text-sm font-medium text-neutral-400 py-3 leading-relaxed">
+            <p className="text-xs sm:text-sm font-medium text-neutral-400 py-1.5 leading-relaxed">
               Click <strong className="text-[#171717]">START SPEAKING</strong> and answer the prompt aloud. Your words will appear here in real time.
             </p>
           )}
         </div>
 
-        {/* Word count and evaluation note */}
-        <div className="mt-4 pt-2.5 border-t border-[#171717]/10 flex items-center justify-between text-[11px] font-mono text-neutral-500">
+        {/* Word count and evaluation status note */}
+        <div className="mt-2.5 pt-2 border-t border-[#171717]/10 flex items-center justify-between text-[10px] font-mono text-neutral-500">
           <span>
             {transcript ? `${transcript.trim().split(/\s+/).filter(Boolean).length} WORDS` : '0 WORDS'}
           </span>
-          <span className="uppercase text-[10px] tracking-wider">
+          <span className="uppercase text-[9px] sm:text-[10px] tracking-wider">
             EVALUATED BY GEMINI AI
           </span>
         </div>
@@ -123,68 +120,71 @@ export const SpeakingControls: React.FC<SpeakingControlsProps> = ({
 
       {/* Speech recognition error warning */}
       {speechError && (
-        <div className="p-3.5 rounded-sm bg-white border-2 border-rose-600 shadow-[2px_2px_0px_0px_#e11d48] text-xs flex items-start gap-2">
+        <div className="p-3 rounded-sm bg-white border-2 border-rose-600 shadow-[2px_2px_0px_0px_#e11d48] text-xs flex items-start gap-2">
           <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
           <div>
-            <p className="font-bold text-[#171717] uppercase tracking-wide">Speech Recognition Notice</p>
-            <p className="mt-0.5 text-neutral-600">{speechError}</p>
+            <p className="font-bold text-[#171717] uppercase tracking-wide text-[11px]">Speech Recognition Notice</p>
+            <p className="mt-0.5 text-neutral-600 text-[11px]">{speechError}</p>
           </div>
         </div>
       )}
 
-      {/* Primary Action Buttons */}
+      {/* Compact Speaking Actions - Always strictly in ONE ROW */}
       {!hasFeedbackAlready && (
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2 w-full pt-1">
           {/* Start / Stop speaking button */}
           {!isListening ? (
             <SpooklyButton
-              variant="primary"
-              size="md"
+              variant="dark"
+              size="sm"
               onClick={onStartSpeaking}
               disabled={isEvaluating}
-              leftIcon={<Mic className="w-4 h-4" />}
+              leftIcon={<Mic className="w-3.5 h-3.5 shrink-0" />}
+              className="flex-1 whitespace-nowrap text-[11px] sm:text-xs py-2 px-2"
             >
               START SPEAKING
             </SpooklyButton>
           ) : (
             <SpooklyButton
-              variant="danger"
-              size="md"
+              variant="dark"
+              size="sm"
               onClick={onStopSpeaking}
-              leftIcon={<Square className="w-4 h-4 fill-current" />}
+              leftIcon={<Square className="w-3.5 h-3.5 fill-current shrink-0" />}
+              className="flex-1 whitespace-nowrap text-[11px] sm:text-xs py-2 px-2"
             >
               STOP SPEAKING
             </SpooklyButton>
           )}
 
-          {/* Retry Answer */}
+          {/* Retry Answer Button */}
           {hasSpokenContent && !isEvaluating && (
             <SpooklyButton
               variant="secondary"
-              size="md"
+              size="sm"
               onClick={onRetryAnswer}
-              leftIcon={<RotateCcw className="w-3.5 h-3.5 text-neutral-600" />}
+              leftIcon={<RotateCcw className="w-3.5 h-3.5 text-neutral-600 shrink-0" />}
+              className="flex-1 whitespace-nowrap text-[11px] sm:text-xs py-2 px-2"
             >
               RETRY ANSWER
             </SpooklyButton>
           )}
 
-          {/* Submit Answer for AI Evaluation */}
+          {/* Submit Answer Button */}
           {hasSpokenContent && !isListening && (
-            <div className="ml-auto">
-              <SpooklyButton
-                variant="primary"
-                size="md"
-                isLoading={isEvaluating}
-                onClick={handleSubmit}
-                rightIcon={<Send className="w-3.5 h-3.5" />}
-              >
-                {isEvaluating ? 'EVALUATING...' : 'SUBMIT ANSWER'}
-              </SpooklyButton>
-            </div>
+            <SpooklyButton
+              variant="dark"
+              size="sm"
+              isLoading={isEvaluating}
+              onClick={handleSubmit}
+              rightIcon={<Send className="w-3.5 h-3.5 shrink-0" />}
+              className="flex-1 whitespace-nowrap text-[11px] sm:text-xs py-2 px-2"
+            >
+              {isEvaluating ? 'EVALUATING...' : 'SUBMIT ANSWER'}
+            </SpooklyButton>
           )}
         </div>
       )}
     </div>
   );
 };
+

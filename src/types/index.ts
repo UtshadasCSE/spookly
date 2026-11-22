@@ -51,6 +51,8 @@ export interface QuestionAnswerRecord {
   answerTranscript: string;
   evaluation: AnswerEvaluation;
   timestamp: number;
+  videoUrl?: string;
+  videoDuration?: number;
 }
 
 export interface DailySessionState {
