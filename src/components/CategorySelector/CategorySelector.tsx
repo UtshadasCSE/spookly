@@ -187,7 +187,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                 key={diff.id}
                 type="button"
                 onClick={() => setSelectedDifficulty(diff.id)}
-                className={`p-3 rounded-xs text-left transition-all border ${
+                className={`p-3 rounded-xs text-left transition-all border cursor-pointer ${
                   isSelected
                     ? 'border-2 border-[#171717] bg-[#c8ff29]/30 shadow-[2px_2px_0px_0px_#171717]'
                     : 'border-[#d4d4d4] bg-white text-neutral-700 hover:border-[#171717]'

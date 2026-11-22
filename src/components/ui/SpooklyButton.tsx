@@ -26,7 +26,7 @@ export const SpooklyButton: React.FC<SpooklyButtonProps> = ({
   ...props
 }) => {
   const baseStyles =
-    'inline-flex items-center justify-center font-bold tracking-tight uppercase transition-all duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#171717] disabled:opacity-50 disabled:pointer-events-none select-none';
+    'inline-flex items-center justify-center font-bold tracking-tight uppercase transition-all duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#171717] disabled:opacity-50 disabled:pointer-events-none select-none cursor-pointer disabled:cursor-not-allowed';
 
   const sizeStyles = {
     sm: 'px-3 py-1.5 text-xs rounded-sm gap-1.5',
