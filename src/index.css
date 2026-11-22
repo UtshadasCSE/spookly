@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #f8f9f5;
+    color: #171717;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Subtle Figma-style square grid canvas */
+.spookly-grid {
+  background-color: #f8f9f5;
+  background-image:
+    linear-gradient(to right, rgba(23, 23, 23, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(23, 23, 23, 0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.spookly-grid-dense {
+  background-color: #f8f9f5;
+  background-image:
+    linear-gradient(to right, rgba(23, 23, 23, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(23, 23, 23, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Figma selection handle dot/square */
+.figma-handle {
+  width: 7px;
+  height: 7px;
+  background-color: #ffffff;
+  border: 1.5px solid #171717;
+  position: absolute;
+  z-index: 20;
+}
+
+/* Subtle focus styling */
+:focus-visible {
+  outline: 2px solid #171717;
+  outline-offset: 2px;
+}
