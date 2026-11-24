@@ -3,18 +3,82 @@ import { AnswerEvaluation, Category, Difficulty, Question } from '../types';
 export class ApiError extends Error {
   code?: string;
   status?: number;
+  isHighDemand?: boolean;
 
-  constructor(message: string, code?: string, status?: number) {
+  constructor(message: string, code?: string, status?: number, isHighDemand?: boolean) {
     super(message);
     this.name = 'ApiError';
     this.code = code;
     this.status = status;
+    this.isHighDemand = isHighDemand;
   }
 }
 
 /**
+ * Checks whether an error is caused by Gemini model high demand (HTTP 503 / UNAVAILABLE)
+ */
+export function isHighDemandError(err: unknown): boolean {
+  if (!err) return false;
+  if (typeof err === 'object') {
+    const e = err as any;
+    if (e.isHighDemand) return true;
+
+    // Check direct status or code
+    if (
+      e.status === 503 ||
+      e.code === 503 ||
+      e.code === 'MODEL_HIGH_DEMAND' ||
+      e.status === 'UNAVAILABLE' ||
+      e.code === 'UNAVAILABLE'
+    ) {
+      return true;
+    }
+
+    // Check nested error object (e.g. { error: { code: 503, message: "...", status: "UNAVAILABLE" } })
+    if (e.error && typeof e.error === 'object') {
+      if (
+        e.error.code === 503 ||
+        e.error.status === 503 ||
+        e.error.status === 'UNAVAILABLE' ||
+        e.error.code === 'UNAVAILABLE' ||
+        e.error.code === 'MODEL_HIGH_DEMAND'
+      ) {
+        return true;
+      }
+      const nestedMsg = String(e.error.message || '');
+      if (
+        nestedMsg.includes('503') ||
+        nestedMsg.toLowerCase().includes('high demand') ||
+        nestedMsg.toLowerCase().includes('spikes in demand') ||
+        nestedMsg.includes('UNAVAILABLE')
+      ) {
+        return true;
+      }
+    }
+
+    const msg = String(e.message || (typeof e.error === 'string' ? e.error : '') || '');
+    if (
+      msg.includes('503') ||
+      msg.toLowerCase().includes('high demand') ||
+      msg.toLowerCase().includes('spikes in demand') ||
+      msg.includes('UNAVAILABLE')
+    ) {
+      return true;
+    }
+  }
+
+  const str = typeof err === 'string' ? err : JSON.stringify(err);
+  return (
+    str.includes('503') ||
+    str.toLowerCase().includes('high demand') ||
+    str.toLowerCase().includes('spikes in demand') ||
+    str.includes('UNAVAILABLE')
+  );
+}
+
+/**
  * Safely parses API responses, handling HTML error pages, non-JSON output,
- * gateway timeouts, and Vercel 404s without raw syntax errors.
+ * gateway timeouts, Vercel 404s, and Gemini 503 high demand payloads.
  */
 async function safeParseResponse(response: Response): Promise<any> {
   const text = await response.text();
@@ -68,13 +132,41 @@ async function safeParseResponse(response: Response): Promise<any> {
     );
   }
 
-  // Handle server-returned JSON error payloads
-  if (!response.ok) {
-    throw new ApiError(
-      data?.error || `Request failed with HTTP ${response.status}`,
-      data?.code || 'API_ERROR',
-      response.status
-    );
+  // Handle server-returned JSON error payloads or raw Gemini error bodies
+  if (!response.ok || (data && data.error)) {
+    let errorMessage = `Request failed with HTTP ${response.status}`;
+    let errorCode = data?.code || 'API_ERROR';
+    let errorStatus = response.status;
+
+    if (typeof data?.error === 'string') {
+      errorMessage = data.error;
+    } else if (data?.error && typeof data.error === 'object') {
+      // Handles raw Gemini format: { error: { code: 503, message: "...", status: "UNAVAILABLE" } }
+      errorMessage = data.error.message || JSON.stringify(data.error);
+      if (data.error.code) errorStatus = Number(data.error.code) || errorStatus;
+      if (data.error.status) errorCode = String(data.error.status);
+    }
+
+    const isHighDemand =
+      errorStatus === 503 ||
+      errorCode === 'MODEL_HIGH_DEMAND' ||
+      errorCode === 'UNAVAILABLE' ||
+      errorMessage.toLowerCase().includes('high demand') ||
+      errorMessage.toLowerCase().includes('spikes in demand') ||
+      errorMessage.includes('UNAVAILABLE');
+
+    if (isHighDemand) {
+      throw new ApiError(
+        'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.',
+        'MODEL_HIGH_DEMAND',
+        503,
+        true
+      );
+    }
+
+    if (!response.ok) {
+      throw new ApiError(errorMessage, errorCode, errorStatus);
+    }
   }
 
   return data;

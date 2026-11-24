@@ -106,27 +106,24 @@ export function useDailyProgress(): UseDailyProgressReturn {
   );
 
   const advanceToNextQuestion = useCallback((): boolean => {
-    let completed = false;
-    setSession((prev) => {
-      if (!prev) return prev;
+    const current = session || loadCurrentSession();
+    if (!current || !current.questions) return false;
 
-      const nextIndex = prev.currentIndex + 1;
-      const isNowCompleted = nextIndex >= prev.questions.length;
+    const nextIndex = current.currentIndex + 1;
+    const isNowCompleted = nextIndex >= current.questions.length;
 
-      const updated: DailySessionState = {
-        ...prev,
-        currentIndex: isNowCompleted ? prev.currentIndex : nextIndex,
-        isCompleted: isNowCompleted,
-        completedAt: isNowCompleted ? Date.now() : prev.completedAt,
-      };
+    const updated: DailySessionState = {
+      ...current,
+      currentIndex: isNowCompleted ? current.currentIndex : nextIndex,
+      isCompleted: isNowCompleted,
+      completedAt: isNowCompleted ? Date.now() : current.completedAt,
+    };
 
-      completed = isNowCompleted;
-      saveCurrentSession(updated);
-      return updated;
-    });
+    setSession(updated);
+    saveCurrentSession(updated);
 
-    return !completed;
-  }, []);
+    return !isNowCompleted;
+  }, [session]);
 
   const resetSession = useCallback(() => {
     clearCurrentSession();

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, AlertCircle, Camera, Mic, CheckCircle2, RotateCcw } from 'lucide-react';
+import { ArrowRight, AlertCircle, Camera, Mic } from 'lucide-react';
 import {
   SpooklyButton,
   SpooklyBadge,
@@ -11,16 +11,10 @@ import {
 
 interface LandingPageProps {
   onGetStarted: () => Promise<boolean>;
-  isCompletedToday?: boolean;
-  onViewResults?: () => void;
-  onResetSession?: () => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   onGetStarted,
-  isCompletedToday = false,
-  onViewResults,
-  onResetSession,
 }) => {
   const [isRequesting, setIsRequesting] = useState<boolean>(false);
   const [permissionError, setPermissionError] = useState<string | null>(null);
@@ -57,50 +51,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* Main Container */}
       <div className="w-full max-w-3xl mx-auto text-center relative z-10">
-        {/* Completed Today Banner if already finished */}
-        {isCompletedToday && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8 p-4 rounded-sm bg-white border-2 border-[#171717] shadow-[3px_3px_0px_0px_#171717] text-left"
-          >
-            <div className="flex items-start gap-3">
-              <span className="p-1 bg-[#c8ff29] border border-[#171717] rounded-xs shrink-0 mt-0.5">
-                <CheckCircle2 className="w-4 h-4 text-[#171717]" />
-              </span>
-              <div className="flex-1">
-                <p className="font-bold text-xs uppercase tracking-wider text-[#171717]">
-                  Daily Session Complete
-                </p>
-                <p className="text-xs text-neutral-600 mt-1">
-                  You have completed today's 10 speaking questions. Your next session unlocks tomorrow.
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {onViewResults && (
-                    <SpooklyButton
-                      variant="primary"
-                      size="sm"
-                      onClick={onViewResults}
-                    >
-                      View Report
-                    </SpooklyButton>
-                  )}
-                  {onResetSession && (
-                    <SpooklyButton
-                      variant="secondary"
-                      size="sm"
-                      onClick={onResetSession}
-                      leftIcon={<RotateCcw className="w-3 h-3" />}
-                    >
-                      Reset & Practice Again
-                    </SpooklyButton>
-                  )}
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
         {/* Small pill: DAILY ENGLISH SPEAKING PRACTICE */}
         <motion.div
           initial={{ opacity: 0, y: -12 }}

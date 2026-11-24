@@ -77,6 +77,29 @@ export default async function handler(req: any, res: any) {
     console.error('API /api/generate-questions error:', err);
 
     const errorMessage = err?.message || 'Failed to generate speaking questions.';
+    const status = err?.status || err?.code || err?.error?.code || err?.error?.status;
+    const isHighDemand =
+      status === 503 ||
+      status === 'UNAVAILABLE' ||
+      errorMessage.includes('503') ||
+      errorMessage.toLowerCase().includes('high demand') ||
+      errorMessage.toLowerCase().includes('spikes in demand') ||
+      errorMessage.includes('UNAVAILABLE');
+
+    if (isHighDemand) {
+      res.statusCode = 503;
+      res.end(
+        JSON.stringify({
+          error:
+            'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.',
+          code: 'MODEL_HIGH_DEMAND',
+          status: 503,
+          retryable: true,
+        })
+      );
+      return;
+    }
+
     const isRateLimit =
       errorMessage.includes('429') ||
       errorMessage.toLowerCase().includes('quota') ||

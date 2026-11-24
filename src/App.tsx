@@ -11,11 +11,21 @@ import { ProgressIndicator } from './components/ProgressIndicator/ProgressIndica
 import { SpeakingControls } from './components/SpeakingControls/SpeakingControls';
 import { AnswerFeedback } from './components/AnswerFeedback/AnswerFeedback';
 import { AnswerVideoModal } from './components/AnswerVideoModal/AnswerVideoModal';
+import { HighDemandModal } from './components/HighDemandModal/HighDemandModal';
 import { ResultsPage } from './components/ResultsPage/ResultsPage';
 import { NotFoundPage } from './components/NotFoundPage/NotFoundPage';
 import { MobileBlocker } from './components/MobileBlocker/MobileBlocker';
 import { useIsMobileDevice } from './hooks/useIsMobileDevice';
-import { fetchQuestions, submitAnswerEvaluation, checkServerHealth } from './services/api';
+import {
+  loadCurrentSession,
+  loadLastCompletedSession,
+} from './services/storage';
+import {
+  fetchQuestions,
+  submitAnswerEvaluation,
+  checkServerHealth,
+  isHighDemandError,
+} from './services/api';
 import { Category, Difficulty } from './types';
 import { AlertCircle } from 'lucide-react';
 import { SpooklyBadge, SpooklyGridBackground } from './components/ui';
@@ -43,6 +53,12 @@ export const App: React.FC = () => {
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [hasApiKey, setHasApiKey] = useState<boolean>(true);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState<boolean>(false);
+  const [highDemandError, setHighDemandError] = useState<{
+    isOpen: boolean;
+    message: string;
+    onRetry: () => Promise<void>;
+  } | null>(null);
+  const [isRetryingDemand, setIsRetryingDemand] = useState<boolean>(false);
 
   // Check mobile device status
   const { isMobile, screenWidth, screenHeight } = useIsMobileDevice();
@@ -89,7 +105,6 @@ export const App: React.FC = () => {
     currentRecord,
     currentIndex,
     totalQuestions,
-    isSessionCompleted,
     startSession,
     recordAnswer,
     advanceToNextQuestion,
@@ -166,19 +181,37 @@ export const App: React.FC = () => {
     setIsLoadingQuestions(true);
     setGlobalError(null);
 
+    const executeGenerate = async () => {
+      setIsLoadingQuestions(true);
+      try {
+        const questions = await fetchQuestions(category, difficulty, 10);
+        startSession(category, difficulty, questions);
+        resetTranscript();
+        setView('practice');
+        setHighDemandError(null);
+      } finally {
+        setIsLoadingQuestions(false);
+      }
+    };
+
     try {
-      const questions = await fetchQuestions(category, difficulty, 10);
-      startSession(category, difficulty, questions);
-      resetTranscript();
-      setView('practice');
+      await executeGenerate();
     } catch (err: any) {
       console.error('Failed to generate session questions:', err);
-      setGlobalError(
-        err?.message ||
-          'Failed to generate questions. Please ensure your Gemini API key is configured properly in .env.'
-      );
-    } finally {
-      setIsLoadingQuestions(false);
+      if (isHighDemandError(err)) {
+        setHighDemandError({
+          isOpen: true,
+          message:
+            err?.message ||
+            'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.',
+          onRetry: executeGenerate,
+        });
+      } else {
+        setGlobalError(
+          err?.message ||
+            'Failed to generate questions. Please ensure your Gemini API key is configured properly in .env.'
+        );
+      }
     }
   };
 
@@ -205,42 +238,89 @@ export const App: React.FC = () => {
     setIsEvaluatingAnswer(true);
     setGlobalError(null);
 
-    try {
-      const evaluation = await submitAnswerEvaluation(
-        currentQuestion.question,
-        spokenTranscript,
-        session?.difficulty || 'intermediate'
-      );
+    const executeEvaluation = async () => {
+      setIsEvaluatingAnswer(true);
+      try {
+        const evaluation = await submitAnswerEvaluation(
+          currentQuestion.question,
+          spokenTranscript,
+          session?.difficulty || 'intermediate'
+        );
 
-      // Record answer, evaluation and video URL with duration
-      recordAnswer(
-        currentQuestion.id,
-        currentQuestion.question,
-        spokenTranscript,
-        evaluation,
-        videoUrl || recordedVideoUrl || undefined,
-        duration || recordedDuration || undefined
-      );
+        // Record answer, evaluation and video URL with duration
+        recordAnswer(
+          currentQuestion.id,
+          currentQuestion.question,
+          spokenTranscript,
+          evaluation,
+          videoUrl || recordedVideoUrl || undefined,
+          duration || recordedDuration || undefined
+        );
+        setHighDemandError(null);
+      } finally {
+        setIsEvaluatingAnswer(false);
+      }
+    };
+
+    try {
+      await executeEvaluation();
     } catch (err: any) {
       console.error('Answer evaluation failed:', err);
-      setGlobalError(
-        err?.message ||
-          'Failed to evaluate your answer with Gemini. Please check your connection and retry.'
-      );
+      if (isHighDemandError(err)) {
+        setHighDemandError({
+          isOpen: true,
+          message:
+            err?.message ||
+            'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.',
+          onRetry: executeEvaluation,
+        });
+      } else {
+        setGlobalError(
+          err?.message ||
+            'Failed to evaluate your answer with Gemini. Please check your connection and retry.'
+        );
+      }
+    }
+  };
+
+  // Retry high demand action from popup modal
+  const handleRetryHighDemand = async () => {
+    if (!highDemandError?.onRetry) return;
+    setIsRetryingDemand(true);
+    try {
+      await highDemandError.onRetry();
+    } catch (err: any) {
+      console.error('Retry high demand failed:', err);
+      if (isHighDemandError(err)) {
+        setHighDemandError((prev) =>
+          prev
+            ? {
+                ...prev,
+                message:
+                  err?.message ||
+                  'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.',
+              }
+            : null
+        );
+      } else {
+        setHighDemandError(null);
+        setGlobalError(err?.message || 'Operation failed. Please try again.');
+      }
     } finally {
-      setIsEvaluatingAnswer(false);
+      setIsRetryingDemand(false);
     }
   };
 
   // Move to next question after reviewing feedback
   const handleNextQuestion = () => {
     setIsPreviewModalOpen(false);
+    const isLast = currentIndex + 1 >= totalQuestions;
     const hasMore = advanceToNextQuestion();
     resetTranscript();
     resetRecording();
     setGlobalError(null);
 
-    if (!hasMore) {
+    if (isLast || !hasMore) {
       // Completed all 10 questions!
       stopDevices();
       setView('results');
@@ -313,9 +393,6 @@ export const App: React.FC = () => {
       {view === 'landing' && (
         <LandingPage
           onGetStarted={handleGetStarted}
-          isCompletedToday={isSessionCompleted}
-          onViewResults={() => setView('results')}
-          onResetSession={handleResetSession}
         />
       )}
 
@@ -466,10 +543,19 @@ export const App: React.FC = () => {
         questionNumber={currentIndex + 1}
       />
 
+      {/* Pop-up Modal: Gemini Model High Demand 503 Notice with Try Again Button */}
+      <HighDemandModal
+        isOpen={Boolean(highDemandError?.isOpen)}
+        onClose={() => setHighDemandError(null)}
+        onRetry={handleRetryHighDemand}
+        isLoading={isRetryingDemand || isLoadingQuestions || isEvaluatingAnswer}
+        errorMessage={highDemandError?.message}
+      />
+
       {/* VIEW: RESULTS PAGE */}
-      {view === 'results' && session && (
+      {view === 'results' && (session || loadCurrentSession() || loadLastCompletedSession()) && (
         <ResultsPage
-          session={session}
+          session={(session || loadCurrentSession() || loadLastCompletedSession())!}
           onBackToHome={() => setView('landing')}
           onResetSession={handleResetSession}
         />
